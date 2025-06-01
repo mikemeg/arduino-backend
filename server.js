@@ -1,46 +1,46 @@
-const express = require("express");
-const fs = require("fs");
-const path = require("path");
+const express = require('express');
 const app = express();
-const PORT = process.env.PORT || 3000;
+const port = process.env.PORT || 3000;
 
-app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-const devicesDir = path.join(__dirname, "devices");
-if (!fs.existsSync(devicesDir)) fs.mkdirSync(devicesDir);
+// Αποθηκευμένα δεδομένα από τις συσκευές
+const devices = {};
 
-// POST από Arduino
-app.post("/update", (req, res) => {
+// Endpoint POST /update από Arduino
+app.post('/update', (req, res) => {
   const { device, lat, lng, sats, state } = req.body;
-  if (!device) return res.status(400).json({ error: "Missing device" });
 
-  const data = {
-    device,
+  if (!device || !lat || !lng) {
+    return res.status(400).json({ error: 'Missing data' });
+  }
+
+  devices[device] = {
     lat: parseFloat(lat),
     lng: parseFloat(lng),
     sats: parseInt(sats),
-    state: state || "OFF",
-    timestamp: Date.now()
+    state: state || 'OFF',
+    updated: new Date().toISOString()
   };
 
-  fs.writeFile(
-    path.join(devicesDir, `${device}.json`),
-    JSON.stringify(data),
-    () => res.json({ success: true })
-  );
+  console.log(`📡 Received update from ${device}:`, devices[device]);
+
+  res.json({ status: 'ok' });
 });
 
-// GET από browser
-app.get("/get/:device", (req, res) => {
-  const file = path.join(devicesDir, `${req.params.device}.json`);
-  if (!fs.existsSync(file)) return res.status(404).json({ error: "Device not found" });
+// Endpoint GET /get?device=karouli1 από το frontend
+app.get('/get', (req, res) => {
+  const { device } = req.query;
 
-  fs.readFile(file, (err, content) => {
-    if (err) return res.status(500).json({ error: "Read error" });
-    res.setHeader("Content-Type", "application/json");
-    res.send(content);
-  });
+  if (!device || !devices[device]) {
+    return res.status(404).json({ error: 'Device not found' });
+  }
+
+  res.json(devices[device]);
 });
 
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+app.listen(port, () => {
+  console.log(`✅ Server is running at http://localhost:${port}`);
+});
+
