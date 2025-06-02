@@ -1,17 +1,16 @@
 const express = require('express');
-const cors = require('cors'); // ✅ Εισαγωγή του CORS πακέτου
-
+const cors = require('cors');
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(cors()); // ✅ Ενεργοποίηση CORS για όλα τα origins
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Αποθηκευμένα δεδομένα από τις συσκευές
+// Συσκευές και οι τελευταίες καταστάσεις τους
 const devices = {};
 
-// Endpoint POST /update από Arduino
+// ✅ Endpoint POST /update από το Arduino
 app.post('/update', (req, res) => {
   const { device, lat, lng, sats, state } = req.body;
 
@@ -23,16 +22,16 @@ app.post('/update', (req, res) => {
     lat: parseFloat(lat),
     lng: parseFloat(lng),
     sats: parseInt(sats),
-    state: state || 'OFF',
+    state: state || devices[device]?.state || 'OFF',
     timestamp: new Date().toISOString()
   };
 
-  console.log(`📡 Received update from ${device}:`, devices[device]);
+  console.log(`📡 [GPS UPDATE] ${device}:`, devices[device]);
 
   res.json({ status: 'ok' });
 });
 
-// Endpoint GET /get?device=karouli1 από το frontend
+// ✅ Endpoint GET /get?device=karouli1 από frontend
 app.get('/get', (req, res) => {
   const { device } = req.query;
 
@@ -43,7 +42,27 @@ app.get('/get', (req, res) => {
   res.json(devices[device]);
 });
 
-// Ξεκινάμε τον server
+// ✅ ΝΕΟ endpoint για αλλαγή κατάστασης από frontend
+app.post('/update-state', (req, res) => {
+  const { device, state } = req.body;
+
+  if (!device || !['ON', 'OFF'].includes(state)) {
+    return res.status(400).json({ error: 'Missing or invalid device/state' });
+  }
+
+  if (!devices[device]) {
+    devices[device] = { lat: null, lng: null, sats: 0 };
+  }
+
+  devices[device].state = state;
+  devices[device].timestamp = new Date().toISOString();
+
+  console.log(`🔄 [STATE UPDATE] ${device}: ${state}`);
+
+  res.json({ status: 'state updated' });
+});
+
+// ✅ Start server
 app.listen(port, () => {
   console.log(`✅ Server is running at http://localhost:${port}`);
 });
