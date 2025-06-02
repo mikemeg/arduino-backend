@@ -1,6 +1,10 @@
 const express = require('express');
+const cors = require('cors'); // ✅ Εισαγωγή του CORS πακέτου
 const app = express();
 const port = process.env.PORT || 3000;
+
+// ✅ Ενεργοποίηση CORS για όλα τα origins (π.χ. GitHub Pages)
+app.use(cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -43,4 +47,5 @@ app.get('/get', (req, res) => {
 app.listen(port, () => {
   console.log(`✅ Server is running at http://localhost:${port}`);
 });
+
 
